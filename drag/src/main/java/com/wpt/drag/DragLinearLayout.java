@@ -93,32 +93,21 @@ public class DragLinearLayout extends LinearLayout {
         switch (action){
             case MotionEvent.ACTION_DOWN://按下
                 lastY = y;
+                isValidMove = false;
                 break;
             case MotionEvent.ACTION_MOVE://
                 if (Math.abs(y - lastY) < ViewConfiguration.get(getContext()).getScaledTouchSlop()){
-                    return false;
-                }
-                if (y > lastY){//向下
-                    isMoveDown = true;
-                    isMoveUp = false;
-                }
-                if (y < lastY){//向上
-                    isMoveDown = false;
-                    isMoveUp = true;
-                    if (isLimitBottom){
-                        if (getBottom() < (getScreenH(getContext()) - getNavigationBarHeight(getContext()) - 10)){
-                            return false;
-                        }
-                    } else {
-                        if (getTop() < getStatusBarHeight(getContext())){
-                            return false;
-                        }
+                    isValidMove = false;
+                } else {
+                    isValidMove = true;
+                    if (y > lastY) {//向下
+                        isMoveUp = false;
+                        isMoveDown = true;
+                    } else {//向上
+                        isMoveDown = false;
+                        isMoveUp = true;
                     }
                 }
-                int offsetY = y - lastY;
-                layout(getLeft(),getTop()+offsetY,
-                        getRight(),getBottom()+offsetY);
-                isValidMove = true;
                 break;
             case MotionEvent.ACTION_UP://当手指抬起
                 if (isValidMove && moveListener != null && (isMoveDown || isMoveUp)){
@@ -130,12 +119,39 @@ public class DragLinearLayout extends LinearLayout {
                     isValidMove = false;
                     isMoveDown = false;
                     isMoveUp = false;
-                    return true;
-                } else {
-                    return false;
                 }
+                isValidMove = false;
+                break;
         }
-        return super.onInterceptTouchEvent(event);
+        return isValidMove;
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        int y = (int) event.getY();
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN://按下
+                break;
+            case MotionEvent.ACTION_MOVE://移动
+                if (isMoveUp){//向上移动时，处理移动的顶点
+                    if (isLimitBottom){
+                        if (getBottom() < (getScreenH(getContext()) - getNavigationBarHeight(getContext()) - 10)){
+                            return true;
+                        }
+                    } else {
+                        if (getTop() < getStatusBarHeight(getContext())){
+                            return true;
+                        }
+                    }
+                }
+                int offsetY = y - lastY;
+                layout(getLeft(), getTop() + offsetY,
+                        getRight(), getBottom()+offsetY);
+                break;
+            case MotionEvent.ACTION_UP://当手指抬起
+                break;
+        }
+        return true;
     }
 
 
@@ -182,6 +198,10 @@ public class DragLinearLayout extends LinearLayout {
         }
         int resourceId = context.getResources().getIdentifier("status_bar_height", "dimen", "android");
         return context.getResources().getDimensionPixelSize(resourceId);
+    }
+
+    public void setLimitBottom(boolean limitBottom) {
+        this.isLimitBottom = limitBottom;
     }
 
 }
